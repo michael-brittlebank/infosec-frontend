@@ -7,6 +7,10 @@
     ]
   },
   "rules": {
-    "no-console": false
+    "no-console": false,
+    "object-literal-sort-keys": false,
+    "import-sources-order": false,
+    "named-imports-order": false,
+    "ordered-imports": false
   }
 }

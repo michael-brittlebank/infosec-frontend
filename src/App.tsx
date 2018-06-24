@@ -1,6 +1,7 @@
 import * as React from 'react';
 import './App.css';
 import logo from './logo.svg';
+import axios, { AxiosResponse } from 'axios';
 
 interface IState {
     currentSearch: string;
@@ -98,20 +99,20 @@ class App extends React.Component<any, IState> {
     }
 
     private _getSearchResults(): void {
-        fetch(
-            'https://randomuser.me/api/',
+        axios.get(
+            'http://localhost:8080/countries/search',
             {
-                method: 'GET'
+                headers: {
+                    'X-Auth-Token': 'abcd1234',
+                    'Accept': 'application/json'
+                }
             }
         )
-            .then((response: Response) => {
-                response.json()
-                    .then((data: any) => {
-                        console.log(data);
-                        this.setState({
-                            searchResults: ['hello']
-                        });
-                    });
+            .then((response: AxiosResponse) => {
+                console.log(response.data);
+                this.setState({
+                    searchResults: ['hello']
+                });
             })
             .catch((err: any) => {
                 console.warn(err);
