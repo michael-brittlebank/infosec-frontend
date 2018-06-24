@@ -9,6 +9,7 @@ interface IState {
     currentSearch: string;
     searchResults: ICountry[];
     isInitialPageState: boolean;
+    isSearchComplete: boolean;
     searchMetadata?: {
         totalResults: number;
         totalCountries: number;
@@ -22,9 +23,11 @@ class App extends React.Component<any, IState> {
         this.state = {
             currentSearch: '',
             searchResults: [],
-            isInitialPageState: true
+            isInitialPageState: true,
+            isSearchComplete: false
         };
-        this._getSearchFromInput = this._getSearchFromInput.bind(this);
+        this._onSearchChange = this._onSearchChange.bind(this);
+        this._submitCountrySearch = this._submitCountrySearch.bind(this);
     }
 
     public render() {
@@ -46,7 +49,7 @@ class App extends React.Component<any, IState> {
                                         className="form-control"
                                         placeholder="Search..."
                                         value={this.state.currentSearch}
-                                        onChange={this._getSearchFromInput}/>
+                                        onChange={this._onSearchChange}/>
                                     {
                                         this.state.currentSearch.length < 1 && !this.state.isInitialPageState ?
                                             <div className="alert alert-danger" role="alert">
@@ -58,7 +61,8 @@ class App extends React.Component<any, IState> {
                                 </div>
                                 <button
                                     type="submit"
-                                    className="btn btn-primary">Submit</button>
+                                    className="btn btn-primary"
+                                    onClick={this._submitCountrySearch}>Submit</button>
                             </form>
                         </div>
                     </div>
@@ -124,26 +128,39 @@ class App extends React.Component<any, IState> {
                             :
                             null
                     }
+                    {
+                        this.state.searchResults.length < 1 && this.state.isSearchComplete && !this.state.isInitialPageState ?
+                            <div className="alert alert-warning" role="alert">
+                                No matching search results
+                            </div>
+                            :
+                            null
+                    }
                 </main>
             </div>
         );
     }
 
-    private _getSearchFromInput(e: React.ChangeEvent<HTMLInputElement>): void {
+    private _onSearchChange(e: React.ChangeEvent<HTMLInputElement>): void {
         // todo, add input debouncing
         const searchValue: string = e.target.value;
         this.setState({
             currentSearch: searchValue,
             searchResults: [],
             isInitialPageState: false,
-            searchMetadata: undefined
+            searchMetadata: undefined,
+            isSearchComplete: false
         });
-        if (e.target.value.length > 0) {
+    }
+
+    private _submitCountrySearch(e: React.MouseEvent<HTMLButtonElement>): void {
+        e.preventDefault();
+        if (this.state.currentSearch.length > 0) {
             axios({
                 method: 'POST',
                 url: 'http://localhost:8080/countries/search',
                 data: {
-                    searchTerm: searchValue
+                    searchTerm: this.state.currentSearch
                 },
                 headers: {
                     'X-Auth-Token': 'abcd1234',
@@ -153,7 +170,8 @@ class App extends React.Component<any, IState> {
                 .then((response: AxiosResponse) => {
                     this.setState({
                         searchResults: response.data.countries,
-                        searchMetadata: response.data.metadata
+                        searchMetadata: response.data.metadata,
+                        isSearchComplete: true
                     });
                 })
                 .catch((err: any) => {
