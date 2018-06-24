@@ -2,10 +2,17 @@ import * as React from 'react';
 import './App.css';
 import logo from './logo.svg';
 import axios, { AxiosResponse } from 'axios';
+import { ICountry } from './interfaces/country.interface';
+import { map } from 'lodash';
 
 interface IState {
     currentSearch: string;
-    searchResults: any[];
+    searchResults: ICountry[];
+    isInitialPageState: boolean;
+    searchMetadata?: {
+        totalResults: number;
+        totalCountries: number;
+    };
 }
 
 class App extends React.Component<any, IState> {
@@ -14,10 +21,10 @@ class App extends React.Component<any, IState> {
         super(props);
         this.state = {
             currentSearch: '',
-            searchResults: []
+            searchResults: [],
+            isInitialPageState: true
         };
         this._getSearchFromInput = this._getSearchFromInput.bind(this);
-        this._getSearchResults = this._getSearchResults.bind(this);
     }
 
     public render() {
@@ -40,6 +47,14 @@ class App extends React.Component<any, IState> {
                                         placeholder="Search..."
                                         value={this.state.currentSearch}
                                         onChange={this._getSearchFromInput}/>
+                                    {
+                                        this.state.currentSearch.length < 1 && !this.state.isInitialPageState ?
+                                            <div className="alert alert-danger" role="alert">
+                                                Please enter a search term
+                                            </div>
+                                            :
+                                            null
+                                    }
                                 </div>
                                 <button
                                     type="submit"
@@ -65,15 +80,42 @@ class App extends React.Component<any, IState> {
                                         </tr>
                                         </thead>
                                         <tbody>
-                                        <tr>
-                                            <td>1</td>
-                                            <td>Mark</td>
-                                            <td>Otto</td>
-                                            <td>@mdo</td>
-                                            <td>@mdo</td>
-                                            <td>@mdo</td>
-                                            <td>@mdo</td>
-                                            <td>@mdo</td>
+                                        {map(this.state.searchResults, (country: ICountry, index: number) => {
+                                            return (
+                                                <tr key={index}>
+                                                    <td>{country.name}</td>
+                                                    <td>{country.alphaCode2}</td>
+                                                    <td>{country.alphaCode3}</td>
+                                                    <td>
+                                                        <img className="country-flag" src={country.flag}/>
+                                                    </td>
+                                                    <td>{country.region}</td>
+                                                    <td>{country.subregion}</td>
+                                                    <td>{country.population.toLocaleString('en')}</td>
+                                                    <td>{country.languages.join(', ')}</td>
+                                                </tr>
+                                            )
+                                        })}
+                                        <tr className="table-secondary">
+                                            <td className="text-right" colSpan={2}>
+                                                <h5>Total Results:</h5>
+                                            </td>
+                                            <td className="text-left">
+                                                <h5>
+                                                    {this.state.searchMetadata ? this.state.searchMetadata.totalResults : ''}
+                                                </h5>
+                                            </td>
+                                            <td colSpan={2}>
+                                                &nbsp;
+                                            </td>
+                                            <td className="text-right" colSpan={2}>
+                                                <h5>Total Countries:</h5>
+                                            </td>
+                                            <td className="text-left">
+                                                <h5>
+                                                    {this.state.searchMetadata ? this.state.searchMetadata.totalCountries : ''}
+                                                </h5>
+                                            </td>
                                         </tr>
                                         </tbody>
                                     </table>
@@ -89,34 +131,35 @@ class App extends React.Component<any, IState> {
 
     private _getSearchFromInput(e: React.ChangeEvent<HTMLInputElement>): void {
         // todo, add input debouncing
+        const searchValue: string = e.target.value;
         this.setState({
-            currentSearch: e.target.value,
-            searchResults: []
+            currentSearch: searchValue,
+            searchResults: [],
+            isInitialPageState: false,
+            searchMetadata: undefined
         });
         if (e.target.value.length > 0) {
-            this._getSearchResults();
-        }
-    }
-
-    private _getSearchResults(): void {
-        axios.get(
-            'http://localhost:8080/countries/search',
-            {
+            axios({
+                method: 'POST',
+                url: 'http://localhost:8080/countries/search',
+                data: {
+                    searchTerm: searchValue
+                },
                 headers: {
                     'X-Auth-Token': 'abcd1234',
                     'Accept': 'application/json'
                 }
-            }
-        )
-            .then((response: AxiosResponse) => {
-                console.log(response.data);
-                this.setState({
-                    searchResults: ['hello']
-                });
             })
-            .catch((err: any) => {
-                console.warn(err);
-            });
+                .then((response: AxiosResponse) => {
+                    this.setState({
+                        searchResults: response.data.countries,
+                        searchMetadata: response.data.metadata
+                    });
+                })
+                .catch((err: any) => {
+                    console.warn(err);
+                });
+        }
     }
 }
 
